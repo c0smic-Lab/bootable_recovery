@@ -30,6 +30,7 @@
 #include <string>
 #include <vector>
 
+#include <android-base/file.h>
 #include <android-base/logging.h>
 #include <android-base/properties.h>
 #include <android-base/stringprintf.h>
@@ -174,6 +175,25 @@ std::vector<std::string> get_data_fs_items() {
     }
   }
   return ret;
+}
+
+bool BlockDevHasFstab(const std::string& path) {
+  std::string bdev_path;
+  if (!android::base::Realpath(path, &bdev_path)) {
+    PLOG(ERROR) << "Failed to get realpath for " << path;
+    return false;
+  }
+  for (const auto& entry : fstab) {
+    std::string fstab_bdev_path;
+    if (!android::base::Realpath(entry.blk_device, &fstab_bdev_path)) {
+      PLOG(ERROR) << "Failed to get realpath for " << entry.blk_device;
+      return false;
+    }
+    if (fstab_bdev_path == bdev_path) {
+      return true;
+    }
+  }
+  return false;
 }
 
 static int exec_cmd(const std::vector<std::string>& args) {
